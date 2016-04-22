@@ -58,7 +58,47 @@ def onFindDupes2(self):
     d.show()
 
 def mergeDupes(res):
-    showInfo("To Be Implemented!")
+    if not res:
+        return
+
+    #did = mw.col.db.scalar(
+    #    "select did from cards where id = ?", cids[0])
+    #deck = mw.col.decks.get(did)
+
+    for s, nidlist in res:
+        for nid in nidlist:
+            note = mw.col.getNote(nid)
+            model = note._model
+            #showInfo(note.fields[0])
+        
+            # Assign model to deck
+            #mw.col.decks.select(deck['id'])
+            #mw.col.decks.get(deck)['mid'] = model['id']
+            #mw.col.decks.save(deck)
+
+            # Assign deck to model
+            #mw.col.models.setCurrent(model)
+            #mw.col.models.current()['did'] = deck['id']
+            #mw.col.models.save(model)
+            
+            # Create new note
+            note_copy = mw.col.newNote()
+            # Copy tags and fields (all model fields) from original note
+            note_copy.tags = note.tags
+            note_copy.fields = note.fields
+            note_copy.fields[0] += " (clone)"
+
+            # Refresh note and add to database
+            note_copy.flush()
+            mw.col.addNote(note_copy)
+
+    # Reset collection and main window
+    mw.col.reset()
+    mw.reset()
+
+    mw.progress.finish()
+
+    tooltip(_("Notes duplicated."), period=1000)
 
 def duplicatesReport2(self, web, fname, search, frm):
     self.mw.progress.start()
