@@ -66,31 +66,27 @@ def mergeDupes(res):
     #deck = mw.col.decks.get(did)
 
     for s, nidlist in res:
+        note = mw.col.getNote(nidlist[0])
+        model = note._model
+        #showInfo(note.fields[0])
+
+        # Create new note
+        note_copy = mw.col.newNote()
+        # Copy tags and fields (all model fields) from original note
+        #note_copy.tags = note.tags
+        note_copy.fields = note.fields
+        #note_copy.fields[0] += " (clone)"
+
         for nid in nidlist:
-            note = mw.col.getNote(nid)
-            model = note._model
-            #showInfo(note.fields[0])
-        
-            # Assign model to deck
-            #mw.col.decks.select(deck['id'])
-            #mw.col.decks.get(deck)['mid'] = model['id']
-            #mw.col.decks.save(deck)
+            n = mw.col.getNote(nid)
+            for (name, value) in note_copy.items():
+               if (n[name] != value and n[name] != ""):
+                  note_copy[name] = value + " / " + n[name]
+            note_copy.tags += n.tags
 
-            # Assign deck to model
-            #mw.col.models.setCurrent(model)
-            #mw.col.models.current()['did'] = deck['id']
-            #mw.col.models.save(model)
-            
-            # Create new note
-            note_copy = mw.col.newNote()
-            # Copy tags and fields (all model fields) from original note
-            note_copy.tags = note.tags
-            note_copy.fields = note.fields
-            note_copy.fields[0] += " (clone)"
-
-            # Refresh note and add to database
-            note_copy.flush()
-            mw.col.addNote(note_copy)
+        # Refresh note and add to database
+        note_copy.flush()
+        mw.col.addNote(note_copy)
 
     # Reset collection and main window
     mw.col.reset()
