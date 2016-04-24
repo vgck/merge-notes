@@ -61,28 +61,25 @@ def mergeDupes(res):
     if not res:
         return
 
-    #did = mw.col.db.scalar(
-    #    "select did from cards where id = ?", cids[0])
-    #deck = mw.col.decks.get(did)
-
+    # Loop through each duplicate
     for s, nidlist in res:
         note = mw.col.getNote(nidlist[0])
         model = note._model
-        #showInfo(note.fields[0])
 
-        # Create new note
+        # Create new note and copy all model fields from original note
         note_copy = mw.col.newNote()
-        # Copy tags and fields (all model fields) from original note
-        #note_copy.tags = note.tags
         note_copy.fields = note.fields
-        #note_copy.fields[0] += " (clone)"
 
+        # Loop through each duplicate note
         for nid in nidlist:
             n = mw.col.getNote(nid)
+            # For each field that is unique and not blank, append to the new note
             for (name, value) in note_copy.items():
-               if (n[name] != value and n[name] != ""):
-                  note_copy[name] = value + " / " + n[name]
+                arr = value.split(" / ")
+                if (n[name] not in arr and n[name] != ""):
+                    note_copy[name] = value + " / " + n[name]
             note_copy.tags += n.tags
+        mw.col.remNotes(nidlist)
 
         # Refresh note and add to database
         note_copy.flush()
@@ -94,7 +91,7 @@ def mergeDupes(res):
 
     mw.progress.finish()
 
-    tooltip(_("Notes duplicated."), period=1000)
+    tooltip(_("Notes merged."), period=1000)
 
 def duplicatesReport2(self, web, fname, search, frm):
     self.mw.progress.start()
