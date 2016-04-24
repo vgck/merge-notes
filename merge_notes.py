@@ -70,20 +70,33 @@ def mergeDupes(res):
         note_copy = mw.col.newNote()
         note_copy.fields = note.fields
 
+        note_copy.flush()
+        mw.col.addNote(note_copy)
+
         # Loop through each duplicate note
         for nid in nidlist:
             n = mw.col.getNote(nid)
+            #[showInfo(str(c.due)) for c in n.cards()]
             # For each field that is unique and not blank, append to the new note
             for (name, value) in note_copy.items():
                 arr = value.split(" / ")
                 if (n[name] not in arr and n[name] != ""):
                     note_copy[name] = value + " / " + n[name]
             note_copy.tags += n.tags
-        mw.col.remNotes(nidlist)
+
+            # Clone card scheduling
+            ncc = note_copy.cards()
+            nc = n.cards()
+            i = 0
+            while i<len(ncc):
+                if nc[i].ivl > ncc[i].ivl:
+                    mw.col.db.execute("update cards set type=?,queue=?,ivl=?,odue=0,due=? where id=?", nc[i].type, nc[i].queue, nc[i].ivl, nc[i].due, ncc[i].id)
+                i+=1
+        #mw.col.remNotes(nidlist)
 
         # Refresh note and add to database
         note_copy.flush()
-        mw.col.addNote(note_copy)
+        #mw.col.addNote(note_copy)
 
     # Reset collection and main window
     mw.col.reset()
