@@ -12,14 +12,24 @@ def mergeDupes(res):
     mw.checkpoint(_("Merge Duplicates"))
     
     def update(ncc, nc):
-        mw.col.db.execute("update cards set mod=?, usn=?, type=?, queue=?, due=?, ivl=?, factor=?, reps=?, lapses=?, left=?, odue=0, odid=0 where id = ?",
-            intTime(), mw.col.usn(), nc.type, nc.queue, nc.due, nc.ivl, nc.factor, nc.reps, nc.lapses, nc.left, ncc.id)
+        #if not mw.col.decks.current()['dyn']:
+        #    curdid = mw.col.decks.current()['id']
+        #else:
+        curdid = nc.did
+        mw.col.db.execute("update cards set did=?, mod=?, usn=?, type=?, queue=?, due=?, ivl=?, factor=?, reps=?, lapses=?, left=?, odue=0, odid=0 where id = ?",
+            curdid, intTime(), mw.col.usn(), nc.type, nc.queue, nc.due, nc.ivl, nc.factor, nc.reps, nc.lapses, nc.left, ncc.id)
 
     for s, nidlist in res:
         note_copy = mw.col.newNote()
         for i, nid in enumerate(nidlist):
             n = mw.col.getNote(nid)
             note_copy.tags += n.tags
+
+            # Because apparently it's nontrivial to retrive cards by ord# so force all cards to exist before we copy the scheduling
+            for (name, value) in n.items():
+                if not n[name]:
+                    n[name] = "BLANK"
+            n.flush()
 
             # Add note to database now to force anki to generate cards, then copy an initial state for the new cards
             if (i == 0):
@@ -29,15 +39,22 @@ def mergeDupes(res):
                     update(ncc, nc)
 
             for (name, value) in note_copy.items():
-                arr = value.split(" / ")
-                if (n[name] not in arr and n[name] != ""):
-                    note_copy[name] = value + " / " + n[name]
+                if value == "BLANK":
+                    note_copy[name] = ""
+                if n[name] != "BLANK":
+                    if not value or value == "BLANK":
+                        note_copy[name] = n[name]
+                        continue
+                    arr = value.split(" / ")
+                    if (n[name] not in arr):
+                        note_copy[name] = value + " / " + n[name]
 
             for ncc, nc in zip(note_copy.cards(), n.cards()):
                 if nc.ivl > ncc.ivl or nc.queue > ncc.queue:
                     update(ncc, nc)
-        mw.col.remNotes(nidlist)
         note_copy.flush()
+        mw.col.remNotes(nidlist)
+        mw.col.tags.bulkRem([note_copy.id], _("duplicate"))
 
     mw.progress.finish()
     mw.col.reset()
